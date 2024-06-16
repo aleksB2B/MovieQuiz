@@ -1,11 +1,12 @@
 import UIKit
 
-
 final class MovieQuizViewController: UIViewController {
     // MARK: - Outlets
-    @IBOutlet weak var imageView: UIImageView!
-    @IBOutlet weak var textLabel: UILabel!
-    @IBOutlet weak var counterLabel: UILabel!
+    @IBOutlet private weak var imageView: UIImageView!
+    @IBOutlet private weak var textLabel: UILabel!
+    @IBOutlet private weak var counterLabel: UILabel!
+    @IBOutlet private weak var yesButton: UIButton!
+    @IBOutlet private weak var noButton: UIButton!
 
     // MARK: - Properties
     private var currentQuestionIndex = 0
@@ -50,6 +51,8 @@ final class MovieQuizViewController: UIViewController {
         textLabel.font = UIFont(name: "YSDisplay-Bold", size: 23)
         counterLabel.font = UIFont(name: "YSDisplay-Medium", size: 20)
         imageView.clipsToBounds = true
+        imageView.layer.cornerRadius = 10
+        resetButtons()
     }
 
     // MARK: - Quiz Flow
@@ -71,18 +74,21 @@ final class MovieQuizViewController: UIViewController {
         textLabel.text = viewModel.text
         imageView.image = viewModel.image
         imageView.layer.borderColor = viewModel.borderColor.cgColor
-        imageView.layer.borderWidth = 4
+        imageView.layer.borderWidth = 8
         counterLabel.text = "\(index + 1)/\(questions.count)"
+        resetButtons()
     }
 
     private func handleAnswer(_ answer: Bool) {
         let question = questions[currentQuestionIndex]
-        let borderColor: UIColor = (question.correctAnswer == answer) ? .green : .red
-        imageView.layer.borderColor = borderColor.cgColor
+        let isCorrect = question.correctAnswer == answer
 
-        if question.correctAnswer == answer {
+        if isCorrect {
             correctAnswers += 1
         }
+
+        showAnswerResult(isCorrect: isCorrect)
+        disableButtons()
 
         currentQuestionIndex += 1
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
@@ -126,6 +132,24 @@ final class MovieQuizViewController: UIViewController {
         return viewModel
     }
 
+    // MARK: - Show Answer Result
+    private func showAnswerResult(isCorrect: Bool) {
+        imageView.layer.masksToBounds = true
+        imageView.layer.borderWidth = 8
+        imageView.layer.borderColor = isCorrect ? UIColor.green.cgColor : UIColor.red.cgColor
+    }
+
+    // MARK: - Button State Management
+    private func resetButtons() {
+        yesButton.isEnabled = true
+        noButton.isEnabled = true
+    }
+
+    private func disableButtons() {
+        yesButton.isEnabled = false
+        noButton.isEnabled = false
+    }
+
     // MARK: - Actions
     @IBAction private func yesButtonClicked(_ sender: Any) {
         handleAnswer(true)
@@ -135,6 +159,8 @@ final class MovieQuizViewController: UIViewController {
         handleAnswer(false)
     }
 }
+
+
 
 
 
