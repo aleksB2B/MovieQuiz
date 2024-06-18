@@ -60,7 +60,7 @@
                                             <fragment content="Рейтинг этого фильма меньше чем 5?">
                                                 <attributes>
                                                     <color key="NSColor" name="YP White (iOS)"/>
-                                                    <font key="NSFont" size="23" name="YSDisplay-Bold"/>
+                                                    <font key="NSFont" size="18" name="YSDisplay-Bold"/>
                                                     <paragraphStyle key="NSParagraphStyle" alignment="center" lineBreakMode="wordWrapping" baseWritingDirection="natural" tighteningFactorForTruncation="0.0"/>
                                                 </attributes>
                                             </fragment>

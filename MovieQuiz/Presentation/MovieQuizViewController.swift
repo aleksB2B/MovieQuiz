@@ -23,7 +23,6 @@ final class MovieQuizViewController: UIViewController {
     struct QuizStepViewModel {
         let image: UIImage?
         let text: String
-        let borderColor: UIColor
     }
 
     private let questions: [QuizQuestion] = [
@@ -73,8 +72,8 @@ final class MovieQuizViewController: UIViewController {
         let viewModel = convert(model: question)
         textLabel.text = viewModel.text
         imageView.image = viewModel.image
-        imageView.layer.borderColor = viewModel.borderColor.cgColor
-        imageView.layer.borderWidth = 8
+        // Сброс рамки при показе нового вопроса
+        imageView.layer.borderWidth = 0
         counterLabel.text = "\(index + 1)/\(questions.count)"
         resetButtons()
     }
@@ -127,8 +126,7 @@ final class MovieQuizViewController: UIViewController {
     // MARK: - Conversion
     private func convert(model: QuizQuestion) -> QuizStepViewModel {
         let image = UIImage(named: model.image)
-        let borderColor: UIColor = (model.correctAnswer) ? .green : .red
-        let viewModel = QuizStepViewModel(image: image, text: model.text, borderColor: borderColor)
+        let viewModel = QuizStepViewModel(image: image, text: model.text)
         return viewModel
     }
 
@@ -136,7 +134,7 @@ final class MovieQuizViewController: UIViewController {
     private func showAnswerResult(isCorrect: Bool) {
         imageView.layer.masksToBounds = true
         imageView.layer.borderWidth = 8
-        imageView.layer.borderColor = isCorrect ? UIColor.green.cgColor : UIColor.red.cgColor
+        imageView.layer.borderColor = isCorrect ? UIColor.ypGreen.cgColor : UIColor.ypRed.cgColor
     }
 
     // MARK: - Button State Management
@@ -159,6 +157,8 @@ final class MovieQuizViewController: UIViewController {
         handleAnswer(false)
     }
 }
+
+
 
 
 
