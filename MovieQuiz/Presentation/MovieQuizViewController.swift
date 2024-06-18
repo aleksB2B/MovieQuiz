@@ -50,7 +50,7 @@ final class MovieQuizViewController: UIViewController {
         textLabel.font = UIFont(name: "YSDisplay-Bold", size: 23)
         counterLabel.font = UIFont(name: "YSDisplay-Medium", size: 20)
         imageView.clipsToBounds = true
-        imageView.layer.cornerRadius = 10
+        imageView.layer.cornerRadius = 20
         resetButtons()
     }
 
@@ -75,6 +75,7 @@ final class MovieQuizViewController: UIViewController {
         // Сброс рамки при показе нового вопроса
         imageView.layer.borderWidth = 0
         counterLabel.text = "\(index + 1)/\(questions.count)"
+        imageView.contentMode = .scaleAspectFill
         resetButtons()
     }
 
