@@ -126,9 +126,10 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
 
         let gamesCount = statisticService.gamesCount
         let bestGame = statisticService.bestGame
+        let bestGameDateFormatted = formatter.string(from: bestGame.date) // Форматирование bestGame.date
         let totalAccuracy = statisticService.totalAccuracy
 
-        let bestGameText = "\(bestGame.correctAnswers) из \(bestGame.totalQuestions) (\(bestGame.date))"
+        let bestGameText = "\(bestGame.correctAnswers) из \(bestGame.totalQuestions) (\(bestGameDateFormatted))"
         let message = """
             Ваш результат:
             Правильные ответы: \(correctAnswers) из \(totalQuestions)
@@ -151,6 +152,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
 
         alertPresenter?.presentAlert(with: alertModel)
     }
+
 
     // MARK: - Conversion
     private func convert(model: QuizQuestion) -> QuizStepViewModel {
