@@ -14,7 +14,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     private var startTime: Date?
     private var endTime: Date?
     private var questionFactory: QuestionFactoryProtocol?
-    private var statisticService: StatisticServiceProtocol = StatisticService() // Убедитесь, что это корректно
+    private var statisticService: StatisticServiceProtocol = StatisticService() 
     private var alertPresenter: AlertPresenter?
 
     struct QuizStepViewModel {
@@ -126,23 +126,19 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
 
         let gamesCount = statisticService.gamesCount
         let bestGame = statisticService.bestGame
-        let bestGameDateFormatted = formatter.string(from: bestGame.date) // Форматирование bestGame.date
+        let bestGameDateFormatted = formatter.string(from: bestGame.date)
         let totalAccuracy = statisticService.totalAccuracy
 
-        let bestGameText = "\(bestGame.correctAnswers) из \(bestGame.totalQuestions) (\(bestGameDateFormatted))"
+        let bestGameText = "\(bestGame.correctAnswers)/\(bestGame.totalQuestions)"
         let message = """
-            Ваш результат:
-            Правильные ответы: \(correctAnswers) из \(totalQuestions)
-            Процент правильных ответов: \(correctPercent)%
-            Время окончания: \(endTimestamp)
-
-            Количество завершённых игр: \(gamesCount)
-            Лучшая попытка: \(bestGameText)
-            Средняя точность: \(totalAccuracy)%
+            Ваш результат:\(correctAnswers)/\(totalQuestions)
+            Количество сыгранных квизов: \(gamesCount)
+            Рекорд: \(bestGameText) (\(bestGameDateFormatted))
+            Средняя точность: \(String(format: "%.1f", totalAccuracy))%
             """
 
         let alertModel = AlertModel(
-            title: "Раунд окончен",
+            title: "Этот раунд окончен!",
             message: message,
             buttonText: "Сыграть ещё раз",
             completion: { [weak self] in
