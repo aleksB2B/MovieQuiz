@@ -8,84 +8,96 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     @IBOutlet private weak var counterLabel: UILabel!
     @IBOutlet private weak var yesButton: UIButton!
     @IBOutlet private weak var noButton: UIButton!
+    @IBOutlet private weak var activityIndicator: UIActivityIndicatorView!
 
+    // MARK: - Properties
     private var currentQuestionIndex = 0
     private var correctAnswers = 0
     private var startTime: Date?
     private var endTime: Date?
-    private var questionFactory: QuestionFactoryProtocol?
-    private var statisticService: StatisticServiceProtocol = StatisticService() 
+    private var questionFactory: QuestionFactory?
+    private var statisticService: StatisticServiceProtocol = StatisticService()
     private var alertPresenter: AlertPresenter?
 
-    struct QuizStepViewModel {
-        let image: UIImage?
-        let text: String
-    }
+    // Установите общее количество вопросов
+    private let totalQuestions = 10
 
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
+
         setupUI()
-        startQuiz()
+        alertPresenter = AlertPresenterImplementation(viewController: self)
+
+        questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
+        showLoadingIndicator()
+        questionFactory?.loadData()
     }
 
     // MARK: - QuestionFactoryDelegate
-    func didReceiveNextQuestion(question: QuizQuestion?) {
-        guard let question = question else {
-            showAlertWithResults()
-            return
-        }
-
+    func didReceiveNextQuestion(question: QuizQuestion) {
         let viewModel = convert(model: question)
         DispatchQueue.main.async { [weak self] in
             self?.updateUI(with: viewModel)
         }
     }
 
+    func didLoadDataFromServer() {
+        activityIndicator.stopAnimating()
+        startQuiz() // Начинаем квиз после загрузки данных
+    }
+
+    func didFailToLoadData(with error: Error) {
+        activityIndicator.stopAnimating()
+        showNetworkError(message: error.localizedDescription)
+    }
+
+    // MARK: - UI Updates
     private func updateUI(with viewModel: QuizStepViewModel) {
         textLabel.text = viewModel.text
         imageView.image = viewModel.image
-        imageView.layer.borderWidth = 0
-        counterLabel.text = "\(currentQuestionIndex + 1)/\(questionFactory?.totalQuestions ?? 0)"
-        imageView.contentMode = .scaleAspectFill
+        counterLabel.text = "\(currentQuestionIndex + 1)/\(totalQuestions)"
         resetButtons()
     }
 
-    // MARK: - Setup
     private func setupUI() {
-        textLabel.font = UIFont(name: "YSDisplay-Bold", size: 23)
-        counterLabel.font = UIFont(name: "YSDisplay-Medium", size: 20)
-        imageView.clipsToBounds = true
         imageView.layer.cornerRadius = 20
         resetButtons()
+    }
+
+    private func showLoadingIndicator() {
+        activityIndicator.isHidden = false
+        activityIndicator.startAnimating()
+    }
+
+    private func resetButtons() {
+        yesButton.isEnabled = true
+        noButton.isEnabled = true
+    }
+
+    private func disableButtons() {
+        yesButton.isEnabled = false
+        noButton.isEnabled = false
+    }
+
+    private func showNetworkError(message: String) {
+        let alert = UIAlertController(title: "Network Error", message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+        present(alert, animated: true, completion: nil)
     }
 
     // MARK: - Quiz Flow
     private func startQuiz() {
         currentQuestionIndex = 0
-        correctAnswers = 0
-        startTime = Date()
-        let questionFactory = QuestionFactory()
-        questionFactory.delegate = self
-        self.questionFactory = questionFactory
-        alertPresenter = AlertPresenter(viewController: self)
-        showQuestion()
-    }
-
-    private func showQuestion() {
-        guard let question = questionFactory?.question(at: currentQuestionIndex) else {
-            showAlertWithResults()
-            return
-        }
-
-        let viewModel = convert(model: question)
-        DispatchQueue.main.async { [weak self] in
-            self?.updateUI(with: viewModel)
-        }
+            correctAnswers = 0
+            startTime = Date()
+            resetImageViewBorder() // Сброс рамки перед началом квиза
+            questionFactory?.requestNextQuestion()
     }
 
     private func handleAnswer(_ answer: Bool) {
         guard let question = questionFactory?.question(at: currentQuestionIndex) else {
+            print("No question found at index \(currentQuestionIndex)")
             showAlertWithResults()
             return
         }
@@ -100,27 +112,32 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
 
         currentQuestionIndex += 1
 
-        if currentQuestionIndex < questionFactory?.totalQuestions ?? 0 {
+        if currentQuestionIndex < totalQuestions {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-                self?.showQuestion()
+                self?.questionFactory?.requestNextQuestion()
             }
         } else {
+            endTime = Date()
+            print("Quiz ended at \(String(describing: endTime))")
             showAlertWithResults()
         }
     }
 
     private func showAlertWithResults() {
-        endTime = Date()
-        guard let startTime = startTime, let endTime = endTime else { return }
+        print("showAlertWithResults called")
+        print("Start time: \(String(describing: startTime)), End time: \(String(describing: endTime))")
 
-        let totalQuestions = questionFactory?.totalQuestions ?? 0
+        guard let startTime = startTime, let endTime = endTime else {
+            print("Start or end time is nil")
+            return
+        }
+
         let correctPercent = Double(correctAnswers) / Double(totalQuestions) * 100.0
 
         let formatter = DateFormatter()
         formatter.dateFormat = "dd.MM.yyyy HH:mm:ss"
         let endTimestamp = formatter.string(from: endTime)
 
-        // Создаем экземпляр GameResult
         let gameResult = GameResult(correctAnswers: correctAnswers, totalQuestions: totalQuestions, date: endTime)
         statisticService.store(result: gameResult)
 
@@ -131,7 +148,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
 
         let bestGameText = "\(bestGame.correctAnswers)/\(bestGame.totalQuestions)"
         let message = """
-            Ваш результат:\(correctAnswers)/\(totalQuestions)
+            Ваш результат: \(correctAnswers)/\(totalQuestions)
             Количество сыгранных квизов: \(gamesCount)
             Рекорд: \(bestGameText) (\(bestGameDateFormatted))
             Средняя точность: \(String(format: "%.1f", totalAccuracy))%
@@ -149,33 +166,41 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         alertPresenter?.presentAlert(with: alertModel)
     }
 
-
     // MARK: - Conversion
     private func convert(model: QuizQuestion) -> QuizStepViewModel {
-        let image = UIImage(named: model.image)
-        return QuizStepViewModel(image: image, text: model.text)
-    }
-
-    // MARK: - Button State Management
-    private func resetButtons() {
-        yesButton.isEnabled = true
-        noButton.isEnabled = true
-    }
-
-    private func disableButtons() {
-        yesButton.isEnabled = false
-        noButton.isEnabled = false
+        return QuizStepViewModel(
+            image: UIImage(data: model.image),
+            text: model.text
+        )
     }
 
     // MARK: - Actions
     @IBAction private func yesButtonClicked(_ sender: Any) {
+        print("Yes button clicked")
         handleAnswer(true)
     }
 
     @IBAction private func noButtonClicked(_ sender: Any) {
+        print("No button clicked")
         handleAnswer(false)
     }
-}
+
+    // MARK: - Helpers
+    private func applyBorderr(isCorrect: Bool, to imageView: UIImageView) {
+        imageView.layer.borderWidth = 5
+        imageView.layer.borderColor = isCorrect ? UIColor.green.cgColor : UIColor.red.cgColor
+
+    }
+    private func resetImageViewBorder() {
+        imageView.layer.borderWidth = 0
+        imageView.layer.borderColor = UIColor.clear.cgColor
+    }
+
+    }
+
+
+
+
 
 
 

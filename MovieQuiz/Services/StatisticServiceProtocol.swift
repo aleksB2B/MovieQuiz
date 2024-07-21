@@ -15,10 +15,5 @@ struct GameResult: Codable {
     let date: Date
 }
 
-protocol StatisticServiceProtocol {
-    var gamesCount: Int { get }
-    var bestGame: GameResult { get }
-    var totalAccuracy: Double { get }
-    func store(result: GameResult)
-}
+
 
