@@ -58,6 +58,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         imageView.image = viewModel.image
         counterLabel.text = "\(currentQuestionIndex + 1)/\(totalQuestions)"
         resetButtons()
+        resetImageViewBorder() // Сброс рамки при обновлении UI
     }
 
     private func setupUI() {
@@ -89,10 +90,10 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     // MARK: - Quiz Flow
     private func startQuiz() {
         currentQuestionIndex = 0
-            correctAnswers = 0
-            startTime = Date()
-            resetImageViewBorder() // Сброс рамки перед началом квиза
-            questionFactory?.requestNextQuestion()
+        correctAnswers = 0
+        startTime = Date()
+        resetImageViewBorder() // Сброс рамки перед началом квиза
+        questionFactory?.requestNextQuestion()
     }
 
     private func handleAnswer(_ answer: Bool) {
@@ -110,16 +111,17 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         applyBorder(isCorrect: isCorrect, to: imageView)
         disableButtons()
 
-        currentQuestionIndex += 1
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            self?.resetImageViewBorder()
+            self?.currentQuestionIndex += 1
 
-        if currentQuestionIndex < totalQuestions {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            if self?.currentQuestionIndex ?? 0 < self?.totalQuestions ?? 0 {
                 self?.questionFactory?.requestNextQuestion()
+            } else {
+                self?.endTime = Date()
+                print("Quiz ended at \(String(describing: self?.endTime))")
+                self?.showAlertWithResults()
             }
-        } else {
-            endTime = Date()
-            print("Quiz ended at \(String(describing: endTime))")
-            showAlertWithResults()
         }
     }
 
@@ -189,14 +191,14 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     private func applyBorderr(isCorrect: Bool, to imageView: UIImageView) {
         imageView.layer.borderWidth = 5
         imageView.layer.borderColor = isCorrect ? UIColor.green.cgColor : UIColor.red.cgColor
-
     }
+
     private func resetImageViewBorder() {
         imageView.layer.borderWidth = 0
         imageView.layer.borderColor = UIColor.clear.cgColor
     }
+}
 
-    }
 
 
 
