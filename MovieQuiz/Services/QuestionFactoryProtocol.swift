@@ -5,12 +5,13 @@
 //  Created by Aleks on 23.06.2024.
 //
 
-import Foundation
-
 protocol QuestionFactoryProtocol {
-    var delegate: QuestionFactoryDelegate? { get set }
-    var totalQuestions: Int { get }
     func requestNextQuestion()
-    func question(at index: Int) -> QuizQuestion? // Добавлено
+    func loadData()
+    func question(at index: Int) -> QuizQuestion?
+    var totalQuestions: Int { get }
 }
+
+
+
 

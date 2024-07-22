@@ -6,66 +6,53 @@
 //
 import Foundation
 
-final class StatisticService: StatisticServiceProtocol {
-    private let storage: UserDefaults = .standard
+protocol StatisticServiceProtocol {
+    var gamesCount: Int { get }
+    var totalAccuracy: Double { get }
+    var bestGame: GameResult { get }
+    func store(result: GameResult)
+}
 
-    private enum Keys: String {
-        case gamesCount
-        case bestGameCorrectAnswers
-        case bestGameTotalQuestions
-        case bestGameDate
-        case totalCorrectAnswers
-        case totalQuestions
-    }
+class StatisticService: StatisticServiceProtocol {
+    private let userDefaults = UserDefaults.standard
 
     var gamesCount: Int {
-        get {
-            return storage.integer(forKey: Keys.gamesCount.rawValue)
-        }
-        set {
-            storage.set(newValue, forKey: Keys.gamesCount.rawValue)
-        }
-    }
-
-    var bestGame: GameResult {
-        get {
-            let correctAnswers = storage.integer(forKey: Keys.bestGameCorrectAnswers.rawValue)
-            let totalQuestions = storage.integer(forKey: Keys.bestGameTotalQuestions.rawValue)
-            let date = storage.object(forKey: Keys.bestGameDate.rawValue) as? Date ?? Date()
-            return GameResult(correctAnswers: correctAnswers, totalQuestions: totalQuestions, date: date)
-        }
-        set {
-            storage.set(newValue.correctAnswers, forKey: Keys.bestGameCorrectAnswers.rawValue)
-            storage.set(newValue.totalQuestions, forKey: Keys.bestGameTotalQuestions.rawValue)
-            storage.set(newValue.date, forKey: Keys.bestGameDate.rawValue)
-        }
+        return userDefaults.integer(forKey: "gamesCount")
     }
 
     var totalAccuracy: Double {
-        get {
-            let totalCorrectAnswers = storage.integer(forKey: Keys.totalCorrectAnswers.rawValue)
-            let totalQuestions = storage.integer(forKey: Keys.totalQuestions.rawValue)
-            return totalQuestions > 0 ? Double(totalCorrectAnswers) / Double(totalQuestions) * 100 : 0
+        return userDefaults.double(forKey: "totalAccuracy")
+    }
+
+    var bestGame: GameResult {
+        guard let data = userDefaults.data(forKey: "bestGame"),
+              let game = try? JSONDecoder().decode(GameResult.self, from: data) else {
+            return GameResult(correctAnswers: 0, totalQuestions: 0, date: Date())
         }
+        return game
     }
 
     func store(result: GameResult) {
+        let currentGamesCount = gamesCount + 1
+        userDefaults.set(currentGamesCount, forKey: "gamesCount")
 
-        gamesCount += 1
+        let correctAnswers = result.correctAnswers
+        let totalQuestions = result.totalQuestions
 
+        let currentAccuracy = Double(correctAnswers) / Double(totalQuestions)
+        let totalAccuracy = self.totalAccuracy
 
-        let totalCorrectAnswers = storage.integer(forKey: Keys.totalCorrectAnswers.rawValue) + result.correctAnswers
-        let totalQuestions = storage.integer(forKey: Keys.totalQuestions.rawValue) + result.totalQuestions
+        let newTotalAccuracy = (totalAccuracy * Double(gamesCount) + currentAccuracy) / Double(currentGamesCount)
+        userDefaults.set(newTotalAccuracy, forKey: "totalAccuracy")
 
-        storage.set(totalCorrectAnswers, forKey: Keys.totalCorrectAnswers.rawValue)
-        storage.set(totalQuestions, forKey: Keys.totalQuestions.rawValue)
-
-
-        if result.correctAnswers > bestGame.correctAnswers {
-            bestGame = result
+        if currentAccuracy > totalAccuracy {
+            if let data = try? JSONEncoder().encode(result) {
+                userDefaults.set(data, forKey: "bestGame")
+            }
         }
     }
 }
+
 
 
 
