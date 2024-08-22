@@ -17,7 +17,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     private var endTime: Date?
     private var questionFactory: QuestionFactory?
     private var statisticService: StatisticServiceProtocol = StatisticService()
-    private var alertPresenter: AlertPresenter?
+    var alertPresenter: AlertPresenter?
     private var presenter: MovieQuizPresenter?
 
     
@@ -87,7 +87,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     }
 
     // MARK: - Quiz Flow
-    private func startQuiz() {
+            func startQuiz() {
         currentQuestionIndex = 0
         correctAnswers = 0
         startTime = Date()
@@ -125,46 +125,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     }
 
     private func showAlertWithResults() {
-        print("showAlertWithResults called")
-        print("Start time: \(String(describing: startTime)), End time: \(String(describing: endTime))")
-
-        guard let startTime = startTime, let endTime = endTime else {
-            print("Start or end time is nil")
-            return
-        }
-
-        let correctPercent = Double(correctAnswers) / Double(totalQuestions) * 100.0
-
-        let formatter = DateFormatter()
-        formatter.dateFormat = "dd.MM.yyyy HH:mm:ss"
-        let endTimestamp = formatter.string(from: endTime)
-
-        let gameResult = GameResult(correctAnswers: correctAnswers, totalQuestions: totalQuestions, date: endTime)
-        statisticService.store(result: gameResult)
-
-        let gamesCount = statisticService.gamesCount
-        let bestGame = statisticService.bestGame
-        let bestGameDateFormatted = formatter.string(from: bestGame.date)
-        let totalAccuracy = statisticService.totalAccuracy
-
-        let bestGameText = "\(bestGame.correctAnswers)/\(bestGame.totalQuestions)"
-        let message = """
-            Ваш результат: \(correctAnswers)/\(totalQuestions)
-            Количество сыгранных квизов: \(gamesCount)
-            Рекорд: \(bestGameText) (\(bestGameDateFormatted))
-            Средняя точность: \(String(format: "%.1f", totalAccuracy))%
-            """
-
-        let alertModel = AlertModel(
-            title: "Этот раунд окончен!",
-            message: message,
-            buttonText: "Сыграть ещё раз",
-            completion: { [weak self] in
-                self?.startQuiz()
-            }
-        )
-
-        alertPresenter?.presentAlert(with: alertModel)
+            presenter?.showAlertWithResults(correctAnswers: correctAnswers, totalQuestions: totalQuestions, startTime: startTime, endTime: endTime)
     }
 
     // MARK: - Actions
