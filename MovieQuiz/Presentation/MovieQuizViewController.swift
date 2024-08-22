@@ -38,10 +38,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
 
     // MARK: - QuestionFactoryDelegate
     func didReceiveNextQuestion(question: QuizQuestion) {
-            guard let viewModel = presenter?.convert(model: question) else { return }
-            DispatchQueue.main.async { [weak self] in
-                self?.updateUI(with: viewModel)
-            }
+            presenter?.didReceiveNextQuestion(question: question)
         }
 
     func didLoadDataFromServer() {
@@ -55,7 +52,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     }
 
     // MARK: - UI Updates
-    private func updateUI(with viewModel: QuizStepViewModel) {
+            func updateUI(with viewModel: QuizStepViewModel) {
         textLabel.text = viewModel.text
         imageView.image = viewModel.image
         counterLabel.text = "\(currentQuestionIndex + 1)/\(totalQuestions)"

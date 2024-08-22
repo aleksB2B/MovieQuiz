@@ -37,4 +37,10 @@ final class MovieQuizPresenter {
             text: model.text
         )
     }
+    func didReceiveNextQuestion(question: QuizQuestion) {
+        let viewModel = convert(model: question)
+        DispatchQueue.main.async { [weak self] in
+            self?.viewController?.updateUI(with: viewModel)
+        }
+    }
 }
