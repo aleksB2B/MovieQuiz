@@ -18,13 +18,15 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     private var questionFactory: QuestionFactory?
     private var statisticService: StatisticServiceProtocol = StatisticService()
     private var alertPresenter: AlertPresenter?
+    private var presenter: MovieQuizPresenter?
 
-    // Установите общее количество вопросов
+    
     private let totalQuestions = 10
 
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
+        presenter = MovieQuizPresenter(viewController: self)
 
         setupUI()
         alertPresenter = AlertPresenterImplementation(viewController: self)
@@ -36,11 +38,11 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
 
     // MARK: - QuestionFactoryDelegate
     func didReceiveNextQuestion(question: QuizQuestion) {
-        let viewModel = convert(model: question)
-        DispatchQueue.main.async { [weak self] in
-            self?.updateUI(with: viewModel)
+            guard let viewModel = presenter?.convert(model: question) else { return }
+            DispatchQueue.main.async { [weak self] in
+                self?.updateUI(with: viewModel)
+            }
         }
-    }
 
     func didLoadDataFromServer() {
         activityIndicator.stopAnimating()
@@ -96,7 +98,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         questionFactory?.requestNextQuestion()
     }
 
-    private func handleAnswer(_ answer: Bool) {
+        func handleAnswer(_ answer: Bool) {
         guard let question = questionFactory?.question(at: currentQuestionIndex) else {
             print("No question found at index \(currentQuestionIndex)")
             showAlertWithResults()
@@ -166,14 +168,6 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         )
 
         alertPresenter?.presentAlert(with: alertModel)
-    }
-
-    // MARK: - Conversion
-    private func convert(model: QuizQuestion) -> QuizStepViewModel {
-        return QuizStepViewModel(
-            image: UIImage(data: model.image),
-            text: model.text
-        )
     }
 
     // MARK: - Actions
