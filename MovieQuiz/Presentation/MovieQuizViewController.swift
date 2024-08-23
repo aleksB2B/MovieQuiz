@@ -8,7 +8,7 @@ final class MovieQuizViewController: UIViewController {
 
     @IBOutlet var imageView: UIImageView!
     @IBOutlet private var textLabel: UILabel!
-    @IBOutlet weak var counterLabel: UILabel!
+    @IBOutlet private weak var counterLabel: UILabel!
     @IBOutlet private var yesButton: UIButton!
     @IBOutlet private var noButton: UIButton!
     @IBOutlet var activityIndicator: UIActivityIndicatorView!
@@ -37,10 +37,9 @@ final class MovieQuizViewController: UIViewController {
     }
 
     // MARK: - Public Methods
-    func updateUI(with viewModel: QuizStepViewModel, questionNumber: Int, totalQuestions: Int) {
+    func updateUI(with viewModel: QuizStepViewModel) {
         imageView.image = viewModel.image
         textLabel.text = viewModel.text
-        counterLabel.text = "\(questionNumber)/\(totalQuestions)"
         yesButton.isEnabled = true
         noButton.isEnabled = true
     }
@@ -62,10 +61,9 @@ final class MovieQuizViewController: UIViewController {
         imageView?.layer.borderWidth = 8
         imageView?.layer.borderColor = isCorrect ? UIColor.ypGreen.cgColor : UIColor.ypRed.cgColor
     }
-    
+
     func resetImageViewBorder() {
         imageView.layer.borderWidth = 0
-        imageView.layer.borderColor = UIColor.clear.cgColor
     }
 
     func disableButtons() {
@@ -73,11 +71,16 @@ final class MovieQuizViewController: UIViewController {
         noButton.isEnabled = false
     }
 
+    func updateCounterLabel(with currentQuestionIndex: Int, totalQuestions: Int) {
+        counterLabel.text = "\(currentQuestionIndex)/\(totalQuestions)"
+    }
+
     // MARK: - Alert Handling
     func startQuiz() {
         presenter?.startQuiz()
     }
 }
+
 
 
 

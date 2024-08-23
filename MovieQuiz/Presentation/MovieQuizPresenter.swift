@@ -11,11 +11,11 @@ import UIKit
 final class MovieQuizPresenter {
     weak var viewController: MovieQuizViewController?
 
-    private var currentQuestionIndex = 0
+    var currentQuestionIndex = 1  // Начинать с 1
     private var correctAnswers = 0
     private var startTime: Date?
     private var endTime: Date?
-    private let totalQuestions = 10
+    let totalQuestions = 10
     private var currentQuestion: QuizQuestion?
 
     private var statisticService: StatisticServiceProtocol = StatisticService()
@@ -25,15 +25,16 @@ final class MovieQuizPresenter {
     init(viewController: MovieQuizViewController) {
         self.viewController = viewController
         self.alertPresenter = AlertPresenterImplementation(viewController: viewController)
-        self.questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
+        questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
         startQuiz()
     }
 
     func startQuiz() {
-        currentQuestionIndex = 0
+        currentQuestionIndex = 1  // Начинать с 1
         correctAnswers = 0
         startTime = Date()
         viewController?.resetImageViewBorder()
+        viewController?.updateCounterLabel(with: currentQuestionIndex, totalQuestions: totalQuestions)
         questionFactory?.loadData()
     }
 
@@ -65,8 +66,9 @@ final class MovieQuizPresenter {
             self?.viewController?.resetImageViewBorder()
             self?.currentQuestionIndex += 1
 
-            if self?.currentQuestionIndex ?? 0 < self?.totalQuestions ?? 0 {
+            if self?.currentQuestionIndex ?? 0 <= self?.totalQuestions ?? 0 {
                 self?.questionFactory?.requestNextQuestion()
+                self?.viewController?.updateCounterLabel(with: self?.currentQuestionIndex ?? 0, totalQuestions: self?.totalQuestions ?? 0)
             } else {
                 self?.endTime = Date()
                 self?.showAlertWithResults()
@@ -91,6 +93,7 @@ final class MovieQuizPresenter {
 
         let formatter = DateFormatter()
         formatter.dateFormat = "dd.MM.yyyy HH:mm:ss"
+        let endTimestamp = formatter.string(from: endTime)
 
         let gameResult = GameResult(correctAnswers: correctAnswers, totalQuestions: totalQuestions, date: endTime)
         statisticService.store(result: gameResult)
@@ -126,9 +129,8 @@ extension MovieQuizPresenter: QuestionFactoryDelegate {
     func didReceiveNextQuestion(question: QuizQuestion) {
         currentQuestion = question
         let viewModel = convert(model: question)
-        let questionNumber = currentQuestionIndex + 1
         DispatchQueue.main.async { [weak self] in
-            self?.viewController?.updateUI(with: viewModel, questionNumber: questionNumber, totalQuestions: self?.totalQuestions ?? 10)
+            self?.viewController?.updateUI(with: viewModel)
         }
     }
 
@@ -142,4 +144,3 @@ extension MovieQuizPresenter: QuestionFactoryDelegate {
         viewController?.showNetworkError(message: error.localizedDescription)
     }
 }
-
