@@ -1,117 +1,81 @@
+
 import UIKit
 
-final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
-
-    // MARK: - Outlets
-    @IBOutlet weak var imageView: UIImageView!
-    @IBOutlet private weak var textLabel: UILabel!
-    @IBOutlet private weak var counterLabel: UILabel!
-    @IBOutlet private weak var yesButton: UIButton!
-    @IBOutlet private weak var noButton: UIButton!
-    @IBOutlet private weak var activityIndicator: UIActivityIndicatorView!
+final class MovieQuizViewController: UIViewController {
 
     // MARK: - Properties
-    var currentQuestionIndex = 0
-    private var startTime: Date?
-    private var endTime: Date?
-    var questionFactory: QuestionFactory?
-    private var statisticService: StatisticServiceProtocol = StatisticService()
-    var alertPresenter: AlertPresenter?
     private var presenter: MovieQuizPresenter?
 
-    
-    let totalQuestions = 10
+    @IBOutlet var imageView: UIImageView!
+    @IBOutlet private var textLabel: UILabel!
+    @IBOutlet weak var counterLabel: UILabel!
+    @IBOutlet private var yesButton: UIButton!
+    @IBOutlet private var noButton: UIButton!
+    @IBOutlet var activityIndicator: UIActivityIndicatorView!
 
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         presenter = MovieQuizPresenter(viewController: self)
-
         setupUI()
-        alertPresenter = AlertPresenterImplementation(viewController: self)
-
-        questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
-        showLoadingIndicator()
-        questionFactory?.loadData()
     }
 
-    // MARK: - QuestionFactoryDelegate
-    func didReceiveNextQuestion(question: QuizQuestion) {
-            presenter?.didReceiveNextQuestion(question: question)
-        }
-
-    func didLoadDataFromServer() {
-        activityIndicator.stopAnimating()
-        startQuiz() 
-    }
-
-    func didFailToLoadData(with error: Error) {
-        activityIndicator.stopAnimating()
-        showNetworkError(message: error.localizedDescription)
-    }
-
-    // MARK: - UI Updates
-            func updateUI(with viewModel: QuizStepViewModel) {
-        textLabel.text = viewModel.text
-        imageView.image = viewModel.image
-        counterLabel.text = "\(currentQuestionIndex + 1)/\(totalQuestions)"
-        resetButtons()
-        resetImageViewBorder() // Сброс рамки при обновлении UI
-    }
-
+    // MARK: - UI Setup
     private func setupUI() {
-        imageView.layer.cornerRadius = 20
-        resetButtons()
-    }
-
-    private func showLoadingIndicator() {
-        activityIndicator.isHidden = false
         activityIndicator.startAnimating()
-    }
-
-    private func resetButtons() {
-        yesButton.isEnabled = true
-        noButton.isEnabled = true
-    }
-
-            func disableButtons() {
         yesButton.isEnabled = false
         noButton.isEnabled = false
     }
 
-    private func showNetworkError(message: String) {
-        let alert = UIAlertController(title: "Network Error", message: message, preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
-        present(alert, animated: true, completion: nil)
-    }
-
-    // MARK: - Quiz Flow
-//    private func showAlertWithResults() {
-//        presenter?.showAlertWithResults
-//    }
-
-    func startQuiz() {
-        presenter?.startQuiz()
-    }
-
     // MARK: - Actions
-    @IBAction private func yesButtonClicked(_ sender: Any) {
+    @IBAction private func yesButtonClicked(_ sender: UIButton) {
         presenter?.yesButtonClicked()
     }
 
-    @IBAction private func noButtonClicked(_ sender: Any) {
+    @IBAction private func noButtonClicked(_ sender: UIButton) {
         presenter?.noButtonClicked()
     }
 
-    // MARK: - Helpers
-    private func applyBorderr(isCorrect: Bool, to imageView: UIImageView) {
-        imageView.layer.borderWidth = 5
-        imageView.layer.borderColor = isCorrect ? UIColor.green.cgColor : UIColor.red.cgColor
+    // MARK: - Public Methods
+    func updateUI(with viewModel: QuizStepViewModel, questionNumber: Int, totalQuestions: Int) {
+        imageView.image = viewModel.image
+        textLabel.text = viewModel.text
+        counterLabel.text = "\(questionNumber)/\(totalQuestions)"
+        yesButton.isEnabled = true
+        noButton.isEnabled = true
     }
 
-            func resetImageViewBorder() {
+    func showNetworkError(message: String) {
+        let alert = UIAlertController(
+            title: "Ошибка",
+            message: message,
+            preferredStyle: .alert
+        )
+        let action = UIAlertAction(title: "Попробовать еще раз", style: .default) { [weak self] _ in
+            self?.presenter?.startQuiz()
+        }
+        alert.addAction(action)
+        present(alert, animated: true, completion: nil)
+    }
+
+    func applyBorder(isCorrect: Bool, to imageView: UIImageView?) {
+        imageView?.layer.borderWidth = 8
+        imageView?.layer.borderColor = isCorrect ? UIColor.ypGreen.cgColor : UIColor.ypRed.cgColor
+    }
+    
+    func resetImageViewBorder() {
         imageView.layer.borderWidth = 0
         imageView.layer.borderColor = UIColor.clear.cgColor
+    }
+
+    func disableButtons() {
+        yesButton.isEnabled = false
+        noButton.isEnabled = false
+    }
+
+    // MARK: - Alert Handling
+    func startQuiz() {
+        presenter?.startQuiz()
     }
 }
 
