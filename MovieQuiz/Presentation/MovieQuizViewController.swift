@@ -3,7 +3,7 @@ import UIKit
 final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
 
     // MARK: - Outlets
-    @IBOutlet private weak var imageView: UIImageView!
+    @IBOutlet weak var imageView: UIImageView!
     @IBOutlet private weak var textLabel: UILabel!
     @IBOutlet private weak var counterLabel: UILabel!
     @IBOutlet private weak var yesButton: UIButton!
@@ -11,17 +11,16 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     @IBOutlet private weak var activityIndicator: UIActivityIndicatorView!
 
     // MARK: - Properties
-    private var currentQuestionIndex = 0
-    private var correctAnswers = 0
+    var currentQuestionIndex = 0
     private var startTime: Date?
     private var endTime: Date?
-    private var questionFactory: QuestionFactory?
+    var questionFactory: QuestionFactory?
     private var statisticService: StatisticServiceProtocol = StatisticService()
     var alertPresenter: AlertPresenter?
     private var presenter: MovieQuizPresenter?
 
     
-    private let totalQuestions = 10
+    let totalQuestions = 10
 
     // MARK: - Lifecycle
     override func viewDidLoad() {
@@ -43,7 +42,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
 
     func didLoadDataFromServer() {
         activityIndicator.stopAnimating()
-        startQuiz() // Начинаем квиз после загрузки данных
+        startQuiz() 
     }
 
     func didFailToLoadData(with error: Error) {
@@ -75,7 +74,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         noButton.isEnabled = true
     }
 
-    private func disableButtons() {
+            func disableButtons() {
         yesButton.isEnabled = false
         noButton.isEnabled = false
     }
@@ -87,56 +86,21 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     }
 
     // MARK: - Quiz Flow
-            func startQuiz() {
-        currentQuestionIndex = 0
-        correctAnswers = 0
-        startTime = Date()
-        resetImageViewBorder() // Сброс рамки перед началом квиза
-        questionFactory?.requestNextQuestion()
-    }
+//    private func showAlertWithResults() {
+//        presenter?.showAlertWithResults
+//    }
 
-        func handleAnswer(_ answer: Bool) {
-        guard let question = questionFactory?.question(at: currentQuestionIndex) else {
-            print("No question found at index \(currentQuestionIndex)")
-            showAlertWithResults()
-            return
-        }
-        let isCorrect = question.correctAnswer == answer
-
-        if isCorrect {
-            correctAnswers += 1
-        }
-
-        applyBorder(isCorrect: isCorrect, to: imageView)
-        disableButtons()
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            self?.resetImageViewBorder()
-            self?.currentQuestionIndex += 1
-
-            if self?.currentQuestionIndex ?? 0 < self?.totalQuestions ?? 0 {
-                self?.questionFactory?.requestNextQuestion()
-            } else {
-                self?.endTime = Date()
-                print("Quiz ended at \(String(describing: self?.endTime))")
-                self?.showAlertWithResults()
-            }
-        }
-    }
-
-    private func showAlertWithResults() {
-            presenter?.showAlertWithResults(correctAnswers: correctAnswers, totalQuestions: totalQuestions, startTime: startTime, endTime: endTime)
+    func startQuiz() {
+        presenter?.startQuiz()
     }
 
     // MARK: - Actions
     @IBAction private func yesButtonClicked(_ sender: Any) {
-        print("Yes button clicked")
-        handleAnswer(true)
+        presenter?.yesButtonClicked()
     }
 
     @IBAction private func noButtonClicked(_ sender: Any) {
-        print("No button clicked")
-        handleAnswer(false)
+        presenter?.noButtonClicked()
     }
 
     // MARK: - Helpers
@@ -145,7 +109,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         imageView.layer.borderColor = isCorrect ? UIColor.green.cgColor : UIColor.red.cgColor
     }
 
-    private func resetImageViewBorder() {
+            func resetImageViewBorder() {
         imageView.layer.borderWidth = 0
         imageView.layer.borderColor = UIColor.clear.cgColor
     }
