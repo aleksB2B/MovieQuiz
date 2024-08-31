@@ -11,26 +11,31 @@
 
 import UIKit
 
-protocol AlertPresenter {
+protocol AlertPresenterProtocol {
     func presentAlert(with model: AlertModel)
 }
 
-class AlertPresenterImplementation: AlertPresenter {
-    private weak var viewController: UIViewController?
+final class AlertPresenterImplementation: AlertPresenterProtocol {
+    private weak var viewController: MovieQuizViewControllerProtocol?
 
-    init(viewController: UIViewController) {
+    init(viewController: MovieQuizViewControllerProtocol) {
         self.viewController = viewController
     }
 
     func presentAlert(with model: AlertModel) {
-        let alert = UIAlertController(title: model.title, message: model.message, preferredStyle: .alert)
-        let action = UIAlertAction(title: model.buttonText, style: .default) { _ in
+        let alert = UIAlertController(
+            title: model.title,
+            message: model.message,
+            preferredStyle: .alert
+        )
+        let action = UIAlertAction(title: model.buttonText, style: .default) { [weak self] _ in
             model.completion()
         }
         alert.addAction(action)
-        viewController?.present(alert, animated: true, completion: nil)
+        (viewController as? UIViewController)?.present(alert, animated: true, completion: nil)
     }
 }
+
 
 
 

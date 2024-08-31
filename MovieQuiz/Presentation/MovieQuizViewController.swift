@@ -1,17 +1,16 @@
 
 import UIKit
 
-final class MovieQuizViewController: UIViewController {
-
+final class MovieQuizViewController: UIViewController, MovieQuizViewControllerProtocol {
     // MARK: - Properties
     private var presenter: MovieQuizPresenter?
 
-    @IBOutlet var imageView: UIImageView!
+    @IBOutlet private var imageView: UIImageView!
     @IBOutlet private var textLabel: UILabel!
     @IBOutlet private weak var counterLabel: UILabel!
     @IBOutlet private var yesButton: UIButton!
     @IBOutlet private var noButton: UIButton!
-    @IBOutlet var activityIndicator: UIActivityIndicatorView!
+    @IBOutlet private var activityIndicator: UIActivityIndicatorView!
 
     // MARK: - Lifecycle
     override func viewDidLoad() {
@@ -36,10 +35,11 @@ final class MovieQuizViewController: UIViewController {
         presenter?.noButtonClicked()
     }
 
-    // MARK: - Public Methods
-    func updateUI(with viewModel: QuizStepViewModel) {
+    // MARK: - MovieQuizViewControllerProtocol
+    func updateUI(with viewModel: QuizStepViewModel, questionNumber: Int, totalQuestions: Int) {
         imageView.image = viewModel.image
         textLabel.text = viewModel.text
+        counterLabel.text = "\(questionNumber)/\(totalQuestions)"
         yesButton.isEnabled = true
         noButton.isEnabled = true
     }
@@ -57,13 +57,17 @@ final class MovieQuizViewController: UIViewController {
         present(alert, animated: true, completion: nil)
     }
 
-    func applyBorder(isCorrect: Bool, to imageView: UIImageView?) {
-        imageView?.layer.borderWidth = 8
-        imageView?.layer.borderColor = isCorrect ? UIColor.ypGreen.cgColor : UIColor.ypRed.cgColor
+    func showLoadingIndicator() {
+        activityIndicator.startAnimating()
     }
 
-    func resetImageViewBorder() {
-        imageView.layer.borderWidth = 0
+    func hideLoadingIndicator() {
+        activityIndicator.stopAnimating()
+    }
+
+    func highlightImageBorder(isCorrectAnswer: Bool) {
+        imageView.layer.borderWidth = 8
+        imageView.layer.borderColor = isCorrectAnswer ? UIColor.ypGreen.cgColor : UIColor.ypRed.cgColor
     }
 
     func disableButtons() {
@@ -71,22 +75,14 @@ final class MovieQuizViewController: UIViewController {
         noButton.isEnabled = false
     }
 
-    func updateCounterLabel(with currentQuestionIndex: Int, totalQuestions: Int) {
-        counterLabel.text = "\(currentQuestionIndex)/\(totalQuestions)"
+    func resetImageViewBorder() {
+        imageView.layer.borderWidth = 0
     }
 
-    // MARK: - Alert Handling
     func startQuiz() {
         presenter?.startQuiz()
     }
 }
-
-
-
-
-
-
-
 
 
 

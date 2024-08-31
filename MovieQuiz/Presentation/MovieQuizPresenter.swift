@@ -9,32 +9,30 @@
 import UIKit
 
 final class MovieQuizPresenter {
-    weak var viewController: MovieQuizViewController?
-
-    var currentQuestionIndex = 1  // Начинать с 1
+    private weak var viewController: MovieQuizViewControllerProtocol?
+    private var currentQuestionIndex = 0
     private var correctAnswers = 0
     private var startTime: Date?
     private var endTime: Date?
-    let totalQuestions = 10
     private var currentQuestion: QuizQuestion?
 
+    private let totalQuestions = 10
     private var statisticService: StatisticServiceProtocol = StatisticService()
     private var questionFactory: QuestionFactory?
-    private var alertPresenter: AlertPresenter?
+    private var alertPresenter: AlertPresenterProtocol?
 
-    init(viewController: MovieQuizViewController) {
+    init(viewController: MovieQuizViewControllerProtocol) {
         self.viewController = viewController
         self.alertPresenter = AlertPresenterImplementation(viewController: viewController)
-        questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
+        self.questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
         startQuiz()
     }
 
     func startQuiz() {
-        currentQuestionIndex = 1  // Начинать с 1
+        currentQuestionIndex = 0
         correctAnswers = 0
         startTime = Date()
         viewController?.resetImageViewBorder()
-        viewController?.updateCounterLabel(with: currentQuestionIndex, totalQuestions: totalQuestions)
         questionFactory?.loadData()
     }
 
@@ -48,27 +46,24 @@ final class MovieQuizPresenter {
 
     private func processAnswer(_ answer: Bool) {
         guard let question = currentQuestion else {
-            print("No current question found")
             showAlertWithResults()
             return
         }
 
         let isCorrect = question.correctAnswer == answer
-
         if isCorrect {
             correctAnswers += 1
         }
 
-        viewController?.applyBorder(isCorrect: isCorrect, to: viewController?.imageView)
+        viewController?.highlightImageBorder(isCorrectAnswer: isCorrect)
         viewController?.disableButtons()
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             self?.viewController?.resetImageViewBorder()
             self?.currentQuestionIndex += 1
 
-            if self?.currentQuestionIndex ?? 0 <= self?.totalQuestions ?? 0 {
+            if self?.currentQuestionIndex ?? 0 < self?.totalQuestions ?? 0 {
                 self?.questionFactory?.requestNextQuestion()
-                self?.viewController?.updateCounterLabel(with: self?.currentQuestionIndex ?? 0, totalQuestions: self?.totalQuestions ?? 0)
             } else {
                 self?.endTime = Date()
                 self?.showAlertWithResults()
@@ -83,14 +78,10 @@ final class MovieQuizPresenter {
         )
     }
 
-    func showAlertWithResults() {
-        guard let startTime = startTime, let endTime = endTime else {
-            print("Start or end time is nil")
-            return
-        }
+    private func showAlertWithResults() {
+        guard let startTime = startTime, let endTime = endTime else { return }
 
         let correctPercent = Double(correctAnswers) / Double(totalQuestions) * 100.0
-
         let formatter = DateFormatter()
         formatter.dateFormat = "dd.MM.yyyy HH:mm:ss"
         let endTimestamp = formatter.string(from: endTime)
@@ -105,11 +96,11 @@ final class MovieQuizPresenter {
 
         let bestGameText = "\(bestGame.correctAnswers)/\(bestGame.totalQuestions)"
         let message = """
-            Ваш результат: \(correctAnswers)/\(totalQuestions)
-            Количество сыгранных квизов: \(gamesCount)
-            Рекорд: \(bestGameText) (\(bestGameDateFormatted))
-            Средняя точность: \(String(format: "%.1f", totalAccuracy))%
-            """
+        Ваш результат: \(correctAnswers)/\(totalQuestions)
+        Количество сыгранных квизов: \(gamesCount)
+        Рекорд: \(bestGameText) (\(bestGameDateFormatted))
+        Средняя точность: \(String(format: "%.1f", totalAccuracy))%
+        """
 
         let alertModel = AlertModel(
             title: "Этот раунд окончен!",
@@ -124,23 +115,24 @@ final class MovieQuizPresenter {
     }
 }
 
-// MARK: - QuestionFactoryDelegate
 extension MovieQuizPresenter: QuestionFactoryDelegate {
     func didReceiveNextQuestion(question: QuizQuestion) {
         currentQuestion = question
         let viewModel = convert(model: question)
         DispatchQueue.main.async { [weak self] in
-            self?.viewController?.updateUI(with: viewModel)
+            guard let self = self else { return }
+            let currentQuestionNumber = self.currentQuestionIndex + 1
+            self.viewController?.updateUI(with: viewModel, questionNumber: currentQuestionNumber, totalQuestions: self.totalQuestions)
         }
     }
 
     func didLoadDataFromServer() {
-        viewController?.activityIndicator.stopAnimating()
+        viewController?.hideLoadingIndicator()
         questionFactory?.requestNextQuestion()
     }
 
     func didFailToLoadData(with error: Error) {
-        viewController?.activityIndicator.stopAnimating()
+        viewController?.hideLoadingIndicator()
         viewController?.showNetworkError(message: error.localizedDescription)
     }
 }

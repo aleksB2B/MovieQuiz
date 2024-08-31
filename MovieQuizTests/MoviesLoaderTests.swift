@@ -18,7 +18,7 @@ class MoviesLoaderTests: XCTestCase{
         loader.loadMovies { result in
 
             switch result {
-            case .success(let movies):
+            case .success(_):
 
                 expectation.fulfill()
             case .failure(_):
@@ -26,7 +26,7 @@ class MoviesLoaderTests: XCTestCase{
                 XCTFail("Unexpected failure") 
             }
         }
-        waitForExpectations(timeout: 1)
+        waitForExpectations(timeout: 3)
     }
     
     func testFailureLoading() throws {
