@@ -10,6 +10,10 @@ import UIKit
 
 final class MovieQuizPresenter {
     private weak var viewController: MovieQuizViewControllerProtocol?
+    private var statisticService: StatisticServiceProtocol
+    private var questionFactory: QuestionFactory
+    private var alertPresenter: AlertPresenterProtocol
+
     private var currentQuestionIndex = 0
     private var correctAnswers = 0
     private var startTime: Date?
@@ -17,14 +21,16 @@ final class MovieQuizPresenter {
     private var currentQuestion: QuizQuestion?
 
     private let totalQuestions = 10
-    private var statisticService: StatisticServiceProtocol = StatisticService()
-    private var questionFactory: QuestionFactory?
-    private var alertPresenter: AlertPresenterProtocol?
 
-    init(viewController: MovieQuizViewControllerProtocol) {
+    init(viewController: MovieQuizViewControllerProtocol,
+         alertPresenter: AlertPresenterProtocol,
+         statisticService: StatisticServiceProtocol,
+         questionFactory: QuestionFactory) {
         self.viewController = viewController
-        self.alertPresenter = AlertPresenterImplementation(viewController: viewController)
-        self.questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
+        self.alertPresenter = alertPresenter
+        self.statisticService = statisticService
+        self.questionFactory = questionFactory
+        self.questionFactory.delegate = self // Set the delegate here
         startQuiz()
     }
 
@@ -33,7 +39,8 @@ final class MovieQuizPresenter {
         correctAnswers = 0
         startTime = Date()
         viewController?.resetImageViewBorder()
-        questionFactory?.loadData()
+        viewController?.showLoadingIndicator()
+        questionFactory.loadData()
     }
 
     func yesButtonClicked() {
@@ -63,7 +70,7 @@ final class MovieQuizPresenter {
             self?.currentQuestionIndex += 1
 
             if self?.currentQuestionIndex ?? 0 < self?.totalQuestions ?? 0 {
-                self?.questionFactory?.requestNextQuestion()
+                self?.questionFactory.requestNextQuestion()
             } else {
                 self?.endTime = Date()
                 self?.showAlertWithResults()
@@ -84,7 +91,6 @@ final class MovieQuizPresenter {
         let correctPercent = Double(correctAnswers) / Double(totalQuestions) * 100.0
         let formatter = DateFormatter()
         formatter.dateFormat = "dd.MM.yyyy HH:mm:ss"
-        let endTimestamp = formatter.string(from: endTime)
 
         let gameResult = GameResult(correctAnswers: correctAnswers, totalQuestions: totalQuestions, date: endTime)
         statisticService.store(result: gameResult)
@@ -111,7 +117,7 @@ final class MovieQuizPresenter {
             }
         )
 
-        alertPresenter?.presentAlert(with: alertModel)
+        alertPresenter.presentAlert(with: alertModel)
     }
 }
 
@@ -128,7 +134,7 @@ extension MovieQuizPresenter: QuestionFactoryDelegate {
 
     func didLoadDataFromServer() {
         viewController?.hideLoadingIndicator()
-        questionFactory?.requestNextQuestion()
+        questionFactory.requestNextQuestion()
     }
 
     func didFailToLoadData(with error: Error) {

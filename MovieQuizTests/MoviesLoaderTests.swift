@@ -9,49 +9,56 @@
 import XCTest
 @testable import MovieQuiz
 
-class MoviesLoaderTests: XCTestCase{
-    func testSuccessLoading() throws {
+final class MoviesLoaderTests: XCTestCase {
 
-        let loader = MoviesLoader()
-        let expectation = expectation(description: "Loading expectation")
+    // Тест успешной загрузки фильмов
+    func testSuccessLoading() {
+        let stubNetworkClient = StubNetworkClient(emulateError: false)
+        let loader = MovieQuiz.MoviesLoader(networkClient: stubNetworkClient)
+        let expectation = self.expectation(description: "Loading expectation")
+
 
         loader.loadMovies { result in
 
             switch result {
-            case .success(_):
+            case .success(let movies):
+                XCTAssertGreaterThan(movies.items.count, 0, "Movies list should not be empty.")
+
+                let firstMovie = movies.items.first
+                XCTAssertNotNil(firstMovie, "First movie should not be nil.")
+                XCTAssertFalse(firstMovie?.title.isEmpty ?? true, "First movie's title should not be empty.")
 
                 expectation.fulfill()
-            case .failure(_):
 
-                XCTFail("Unexpected failure") 
+            case .failure(let error):
+                XCTFail("Unexpected failure with error: \(error)")
             }
         }
-        waitForExpectations(timeout: 3)
+
+
+        waitForExpectations(timeout: 3, handler: nil)
     }
     
-    func testFailureLoading() throws {
-        // Given
-        let stubNetworkClient = StubNetworkClient(emulateError: true) // говорим, что хотим эмулировать ошибку
-        let loader = MoviesLoader(networkClient: stubNetworkClient)
+    // Тест неудачной загрузки фильмов
+    func testFailureLoading() {
+        let stubNetworkClient = StubNetworkClient(emulateError: true)
+        let loader = MovieQuiz.MoviesLoader(networkClient: stubNetworkClient)
+        let expectation = self.expectation(description: "Loading expectation")
 
-        // When
-        let expectation = expectation(description: "Loading expectation")
 
         loader.loadMovies { result in
-            // Then
+
             switch result {
             case .failure(let error):
-                XCTAssertNotNil(error)
+                XCTAssertNotNil(error, "Error should not be nil.")
                 expectation.fulfill()
+
             case .success(_):
-                XCTFail("Unexpected failure")
+                XCTFail("Unexpected success")
             }
         }
 
-        waitForExpectations(timeout: 1)
+
+        waitForExpectations(timeout: 3, handler: nil)
     }
 }
-
-
-
-

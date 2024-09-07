@@ -5,8 +5,6 @@
 //  Created by Aleks on 23.08.2024.
 //
 
-import UIKit
-
 protocol MovieQuizViewControllerProtocol: AnyObject {
     func updateUI(with viewModel: QuizStepViewModel, questionNumber: Int, totalQuestions: Int)
     func showNetworkError(message: String)
@@ -17,5 +15,3 @@ protocol MovieQuizViewControllerProtocol: AnyObject {
     func resetImageViewBorder()
     func startQuiz()
 }
-
-
