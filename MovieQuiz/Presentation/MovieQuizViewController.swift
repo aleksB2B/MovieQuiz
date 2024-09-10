@@ -1,275 +1,117 @@
+
 import UIKit
 
-final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
-
-    // MARK: - Outlets
-    @IBOutlet private weak var imageView: UIImageView!
-    @IBOutlet private weak var textLabel: UILabel!
-    @IBOutlet private weak var counterLabel: UILabel!
-    @IBOutlet private weak var yesButton: UIButton!
-    @IBOutlet private weak var noButton: UIButton!
-    @IBOutlet private weak var activityIndicator: UIActivityIndicatorView!
-
+final class MovieQuizViewController: UIViewController, MovieQuizViewControllerProtocol, AlertPresenterProtocol {
     // MARK: - Properties
-    private var currentQuestionIndex = 0
-    private var correctAnswers = 0
-    private var startTime: Date?
-    private var endTime: Date?
-    private var questionFactory: QuestionFactory?
-    private var statisticService: StatisticServiceProtocol = StatisticService()
-    private var alertPresenter: AlertPresenter?
+    private var presenter: MovieQuizPresenter?
 
-    // Установите общее количество вопросов
-    private let totalQuestions = 10
+    @IBOutlet private var imageView: UIImageView!
+    @IBOutlet private var textLabel: UILabel!
+    @IBOutlet private weak var counterLabel: UILabel!
+    @IBOutlet private var yesButton: UIButton!
+    @IBOutlet private var noButton: UIButton!
+    @IBOutlet private var activityIndicator: UIActivityIndicatorView!
 
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
-
         setupUI()
-        alertPresenter = AlertPresenterImplementation(viewController: self)
-
-        questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
-        showLoadingIndicator()
-        questionFactory?.loadData()
-    }
-
-    // MARK: - QuestionFactoryDelegate
-    func didReceiveNextQuestion(question: QuizQuestion) {
-        let viewModel = convert(model: question)
-        DispatchQueue.main.async { [weak self] in
-            self?.updateUI(with: viewModel)
-        }
-    }
-
-    func didLoadDataFromServer() {
-        activityIndicator.stopAnimating()
-        startQuiz() // Начинаем квиз после загрузки данных
-    }
-
-    func didFailToLoadData(with error: Error) {
-        activityIndicator.stopAnimating()
-        showNetworkError(message: error.localizedDescription)
-    }
-
-    // MARK: - UI Updates
-    private func updateUI(with viewModel: QuizStepViewModel) {
-        textLabel.text = viewModel.text
-        imageView.image = viewModel.image
-        counterLabel.text = "\(currentQuestionIndex + 1)/\(totalQuestions)"
-        resetButtons()
-        resetImageViewBorder() // Сброс рамки при обновлении UI
+        setupPresenter()
     }
 
     private func setupUI() {
-        imageView.layer.cornerRadius = 20
-        resetButtons()
-    }
-
-    private func showLoadingIndicator() {
-        activityIndicator.isHidden = false
         activityIndicator.startAnimating()
-    }
-
-    private func resetButtons() {
-        yesButton.isEnabled = true
-        noButton.isEnabled = true
-    }
-
-    private func disableButtons() {
         yesButton.isEnabled = false
         noButton.isEnabled = false
     }
 
-    private func showNetworkError(message: String) {
-        let alert = UIAlertController(title: "Network Error", message: message, preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
-        present(alert, animated: true, completion: nil)
-    }
+    private func setupPresenter() {
+        // Создаем MoviesLoader
+        let moviesLoader = MoviesLoader()
 
-    // MARK: - Quiz Flow
-    private func startQuiz() {
-        currentQuestionIndex = 0
-        correctAnswers = 0
-        startTime = Date()
-        resetImageViewBorder() // Сброс рамки перед началом квиза
-        questionFactory?.requestNextQuestion()
-    }
+        // Создаем QuestionFactory и передаем в него MoviesLoader, делегат пока nil
+        let questionFactory = QuestionFactory(moviesLoader: moviesLoader, delegate: nil)
 
-    private func handleAnswer(_ answer: Bool) {
-        guard let question = questionFactory?.question(at: currentQuestionIndex) else {
-            print("No question found at index \(currentQuestionIndex)")
-            showAlertWithResults()
-            return
-        }
-        let isCorrect = question.correctAnswer == answer
-
-        if isCorrect {
-            correctAnswers += 1
-        }
-
-        applyBorder(isCorrect: isCorrect, to: imageView)
-        disableButtons()
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            self?.resetImageViewBorder()
-            self?.currentQuestionIndex += 1
-
-            if self?.currentQuestionIndex ?? 0 < self?.totalQuestions ?? 0 {
-                self?.questionFactory?.requestNextQuestion()
-            } else {
-                self?.endTime = Date()
-                print("Quiz ended at \(String(describing: self?.endTime))")
-                self?.showAlertWithResults()
-            }
-        }
-    }
-
-    private func showAlertWithResults() {
-        print("showAlertWithResults called")
-        print("Start time: \(String(describing: startTime)), End time: \(String(describing: endTime))")
-
-        guard let startTime = startTime, let endTime = endTime else {
-            print("Start or end time is nil")
-            return
-        }
-
-        let correctPercent = Double(correctAnswers) / Double(totalQuestions) * 100.0
-
-        let formatter = DateFormatter()
-        formatter.dateFormat = "dd.MM.yyyy HH:mm:ss"
-        let endTimestamp = formatter.string(from: endTime)
-
-        let gameResult = GameResult(correctAnswers: correctAnswers, totalQuestions: totalQuestions, date: endTime)
-        statisticService.store(result: gameResult)
-
-        let gamesCount = statisticService.gamesCount
-        let bestGame = statisticService.bestGame
-        let bestGameDateFormatted = formatter.string(from: bestGame.date)
-        let totalAccuracy = statisticService.totalAccuracy
-
-        let bestGameText = "\(bestGame.correctAnswers)/\(bestGame.totalQuestions)"
-        let message = """
-            Ваш результат: \(correctAnswers)/\(totalQuestions)
-            Количество сыгранных квизов: \(gamesCount)
-            Рекорд: \(bestGameText) (\(bestGameDateFormatted))
-            Средняя точность: \(String(format: "%.1f", totalAccuracy))%
-            """
-
-        let alertModel = AlertModel(
-            title: "Этот раунд окончен!",
-            message: message,
-            buttonText: "Сыграть ещё раз",
-            completion: { [weak self] in
-                self?.startQuiz()
-            }
+        // Создаем MovieQuizPresenter и передаем в него QuestionFactory
+        presenter = MovieQuizPresenter(
+            viewController: self,
+            alertPresenter: self,
+            statisticService: StatisticService(),
+            questionFactory: questionFactory
         )
 
-        alertPresenter?.presentAlert(with: alertModel)
-    }
-
-    // MARK: - Conversion
-    private func convert(model: QuizQuestion) -> QuizStepViewModel {
-        return QuizStepViewModel(
-            image: UIImage(data: model.image),
-            text: model.text
-        )
+        // Настраиваем делегат для QuestionFactory
+        questionFactory.delegate = presenter
     }
 
     // MARK: - Actions
-    @IBAction private func yesButtonClicked(_ sender: Any) {
-        print("Yes button clicked")
-        handleAnswer(true)
+    @IBAction private func yesButtonClicked(_ sender: UIButton) {
+        presenter?.yesButtonClicked()
     }
 
-    @IBAction private func noButtonClicked(_ sender: Any) {
-        print("No button clicked")
-        handleAnswer(false)
+    @IBAction private func noButtonClicked(_ sender: UIButton) {
+        presenter?.noButtonClicked()
     }
 
-    // MARK: - Helpers
-    private func applyBorderr(isCorrect: Bool, to imageView: UIImageView) {
-        imageView.layer.borderWidth = 5
-        imageView.layer.borderColor = isCorrect ? UIColor.green.cgColor : UIColor.red.cgColor
+    // MARK: - MovieQuizViewControllerProtocol
+    func updateUI(with viewModel: QuizStepViewModel, questionNumber: Int, totalQuestions: Int) {
+        imageView.image = viewModel.image
+        textLabel.text = viewModel.text
+        counterLabel.text = "\(questionNumber)/\(totalQuestions)"
+        yesButton.isEnabled = true
+        noButton.isEnabled = true
     }
 
-    private func resetImageViewBorder() {
+    func showNetworkError(message: String) {
+        let alert = UIAlertController(
+            title: "Ошибка",
+            message: message,
+            preferredStyle: .alert
+        )
+        let action = UIAlertAction(title: "Попробовать еще раз", style: .default) { [weak self] _ in
+            self?.presenter?.startQuiz()
+        }
+        alert.addAction(action)
+        present(alert, animated: true, completion: nil)
+    }
+
+    func showLoadingIndicator() {
+        activityIndicator.startAnimating()
+    }
+
+    func hideLoadingIndicator() {
+        activityIndicator.stopAnimating()
+    }
+
+    func highlightImageBorder(isCorrectAnswer: Bool) {
+        imageView.layer.borderWidth = 8
+        imageView.layer.borderColor = isCorrectAnswer ? UIColor.ypGreen.cgColor : UIColor.ypRed.cgColor
+    }
+
+    func disableButtons() {
+        yesButton.isEnabled = false
+        noButton.isEnabled = false
+    }
+
+    func resetImageViewBorder() {
         imageView.layer.borderWidth = 0
-        imageView.layer.borderColor = UIColor.clear.cgColor
+    }
+
+    func startQuiz() {
+        presenter?.startQuiz()
+    }
+
+    // MARK: - AlertPresenterProtocol
+    func presentAlert(with model: AlertModel) {
+        let alert = UIAlertController(
+            title: model.title,
+            message: model.message,
+            preferredStyle: .alert
+        )
+        let action = UIAlertAction(title: model.buttonText, style: .default) { _ in
+            model.completion()
+        }
+        alert.addAction(action)
+        present(alert, animated: true, completion: nil)
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-/*
- Mock-данные
- 
- 
- Картинка: The Godfather
- Настоящий рейтинг: 9,2
- Вопрос: Рейтинг этого фильма больше чем 6?
- Ответ: ДА
- 
- 
- Картинка: The Dark Knight
- Настоящий рейтинг: 9
- Вопрос: Рейтинг этого фильма больше чем 6?
- Ответ: ДА
- 
- 
- Картинка: Kill Bill
- Настоящий рейтинг: 8,1
- Вопрос: Рейтинг этого фильма больше чем 6?
- Ответ: ДА
- 
- 
- Картинка: The Avengers
- Настоящий рейтинг: 8
- Вопрос: Рейтинг этого фильма больше чем 6?
- Ответ: ДА
- 
- 
- Картинка: Deadpool
- Настоящий рейтинг: 8
- Вопрос: Рейтинг этого фильма больше чем 6?
- Ответ: ДА
- 
- 
- Картинка: The Green Knight
- Настоящий рейтинг: 6,6
- Вопрос: Рейтинг этого фильма больше чем 6?
- Ответ: ДА
- 
- 
- Картинка: Old
- Настоящий рейтинг: 5,8
- Вопрос: Рейтинг этого фильма больше чем 6?
- Ответ: НЕТ
- 
- 
- Картинка: The Ice Age Adventures of Buck Wild
- Настоящий рейтинг: 4,3
- Вопрос: Рейтинг этого фильма больше чем 6?
- Ответ: НЕТ
- 
- 
- Картинка: Tesla
- Настоящий рейтинг: 5,1
- Вопрос: Рейтинг этого фильма больше чем 6?
- Ответ: НЕТ
- 
- 
- Картинка: Vivarium
- Настоящий рейтинг: 5,8
- Вопрос: Рейтинг этого фильма больше чем 6?
- Ответ: НЕТ
-*/
